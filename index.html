@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" translate="no">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<!-- v20: cegah Chrome/Google Translate nerjemahin halaman ini otomatis. Translate
+     suka bentrok sama halaman yg banyak manipulasi DOM dinamis (render() ganti
+     innerHTML ratusan kartu, overlay loading yg di-remove(), dll) -- efeknya bisa
+     macem2 mulai dari teks tombol jadi kosong/hilang sebagian sampai error JS,
+     krn Translate & script halaman sama2 rebutan ubah node yg sama. Ditemukan dari
+     laporan user: tombol "Customer (Outlet)" kadang cuma tampil emoji-nya doang
+     tanpa teks, SEDANGKAN tombol Admin di sebelahnya normal -- dicurigai kuat ini
+     krn ikon Translate aktif di screenshot user (bukan bug di app-nya sendiri). -->
+<meta name="google" content="notranslate">
 <title>Katalog Produk NABIRE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
