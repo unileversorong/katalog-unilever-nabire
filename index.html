@@ -114,6 +114,21 @@
   .cat-title .count{font-size:11.5px;color:var(--muted);font-weight:600;}
   .cat-title::after{content:"";flex:1;height:1px;background:var(--line);}
 
+  /* ===== Pembatas blok "Stok Habis" =====
+     Muncul SEKALI di antara semua produk tersedia (di atas) dan semua produk
+     habis (di bawah) -- lihat render(), bukan per-kategori. Beda dari .cat-title
+     supaya jelas ini transisi besar, bukan sekadar ganti kategori. */
+  .habis-section-divider{
+    display:flex;align-items:center;gap:10px;
+    margin:32px 16px 14px;padding-top:18px;
+    border-top:2px dashed var(--line);
+  }
+  .habis-section-divider span{
+    font-size:12.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;
+    color:#8A1C1C;white-space:nowrap;
+  }
+  .habis-section-divider::after{content:"";flex:1;height:1px;background:var(--line);}
+
   /* ===== GRID ===== */
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 12px;}
   @media(min-width:640px){.grid{grid-template-columns:repeat(4,1fr);}}
@@ -2873,17 +2888,26 @@ function render(){
   const cat = getActiveCategory();
   const brand = getActiveBrand();
   const catalogEl = document.getElementById('catalog');
-  const groups = {};
+  // Sejak v19 (status stok per kota): produk TERSEDIA dikelompokkan & ditampilkan
+  // duluan (seluruh katalog, lintas kategori), produk HABIS digeser ke satu blok
+  // TERPISAH di paling bawah (juga dikelompokkan per kategori di dalamnya) --
+  // dipisah pakai 2 object "groups" beda, BUKAN 1 object spt sebelumnya, supaya
+  // urutan kategori A-Z tetap identik utk masing2 blok (blok tersedia dulu dari
+  // A-Z, baru blok habis dari A-Z lagi) TANPA kategori manapun ketuker urutan.
+  const groupsTersedia = {};
+  const groupsHabis = {};
 
   PRODUCTS.forEach(p=>{
     if(cat!=="Semua" && p.kategori!==cat) return;
     if(brand!=="Semua Brand" && getBrand(p.nama)!==brand) return;
     if(q && !productMatchesSearch(p, q)) return;
-    (groups[p.kategori] = groups[p.kategori]||[]).push(p);
+    const bucket = HABIS_SET.has(p.kode) ? groupsHabis : groupsTersedia;
+    (bucket[p.kategori] = bucket[p.kategori]||[]).push(p);
   });
 
-  const catKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b));
-  document.getElementById('emptyState').style.display = catKeys.length? "none":"block";
+  const totalTersedia = Object.values(groupsTersedia).reduce((n,arr)=>n+arr.length, 0);
+  const totalHabis = Object.values(groupsHabis).reduce((n,arr)=>n+arr.length, 0);
+  document.getElementById('emptyState').style.display = (totalTersedia+totalHabis)? "none":"block";
 
   const noticeEl = document.getElementById('autoWidenNotice');
   if(noticeEl){
@@ -2891,21 +2915,34 @@ function render(){
     else{ noticeEl.style.display = "none"; }
   }
 
-  catalogEl.innerHTML = catKeys.map(catName=>{
-    const items = groups[catName].sort((a,b)=>{
+  function sortItems(items){
+    return items.sort((a,b)=>{
       if(q){
         const sa = productSearchScore(a, q), sb = productSearchScore(b, q);
         if(sa!==sb) return sa-sb; // produk yang paling cocok sama query naik ke atas
       }
       return a.nama.localeCompare(b.nama);
     });
-    return `
-      <div class="cat-title"><h2>${catName}</h2><span class="count">${items.length} produk</span></div>
-      <div class="grid">
-        ${items.map(cardHTML).join("")}
-      </div>
-    `;
-  }).join("");
+  }
+
+  function renderGroups(groups){
+    const catKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+    return catKeys.map(catName=>{
+      const items = sortItems(groups[catName]);
+      return `
+        <div class="cat-title"><h2>${catName}</h2><span class="count">${items.length} produk</span></div>
+        <div class="grid">
+          ${items.map(cardHTML).join("")}
+        </div>
+      `;
+    }).join("");
+  }
+
+  const dividerHTML = totalHabis>0
+    ? `<div class="habis-section-divider"><span>⚠️ Stok Habis (${totalHabis} produk)</span></div>`
+    : "";
+
+  catalogEl.innerHTML = renderGroups(groupsTersedia) + dividerHTML + renderGroups(groupsHabis);
 
   // Catatan performa: klik/input di dalam kartu produk (foto, +Pesan, qtybox, unit
   // tab) ditangani lewat EVENT DELEGATION satu kali di bawah (di luar render()),
