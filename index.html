@@ -36,6 +36,34 @@
     -webkit-font-smoothing:antialiased;
   }
 
+  /* ===== v20: Loading overlay =====
+     File ini besar (~11.6MB, 865 foto ter-embed) -- browser WAJIB selesai
+     download SELURUH file dulu sebelum blok skrip di bawah mulai jalan (baru
+     setelah itu tombol Customer/Admin ke-attach event listener-nya), jadi ada
+     jeda (tergantung kecepatan koneksi) di mana kartu login SUDAH kelihatan
+     tapi tombolnya BELUM merespon klik -- user kesulitan bedain ini "loading"
+     apa "error/macet". Overlay ini murni HTML+CSS (TIDAK butuh JS utk tampil,
+     supaya pasti kelihatan dari awal walau skrip belum jalan sama sekali),
+     nutupin seluruh layar dgn spinner+teks "Memuat katalog...", DIHAPUS oleh
+     JS begitu tombol peran (Customer/Admin) sudah ke-attach listener-nya --
+     lihat pencarian "appLoadingOverlay" di bagian skrip utama.
+  */
+  #appLoadingOverlay{
+    position:fixed;inset:0;z-index:9999;
+    background:var(--paper);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;padding:24px;text-align:center;
+  }
+  #appLoadingOverlay .spinner{
+    width:40px;height:40px;border-radius:50%;
+    border:4px solid var(--amber-soft);
+    border-top-color:var(--amber);
+    animation:appLoadingSpin .8s linear infinite;
+  }
+  #appLoadingOverlay .loading-title{font-size:15px;font-weight:800;color:var(--navy-dark);}
+  #appLoadingOverlay .loading-sub{font-size:12.5px;color:var(--muted);max-width:280px;line-height:1.5;}
+  @keyframes appLoadingSpin{ to{ transform:rotate(360deg); } }
+
   /* ===== HEADER ===== */
   header{
     background:var(--navy);
@@ -520,6 +548,12 @@
 </head>
 <body class="locked">
 
+<div id="appLoadingOverlay">
+  <div class="spinner" aria-hidden="true"></div>
+  <div class="loading-title">Memuat katalog&hellip;</div>
+  <div class="loading-sub">Sedang mengunduh data produk &amp; foto. Mohon tunggu, jangan ditutup &mdash; tombol di bawah akan aktif begitu proses ini selesai.</div>
+</div>
+
 <div id="login-screen">
   <div class="login-card" id="roleChoiceCard">
     <h1>Katalog Produk Unilever</h1>
@@ -678,6 +712,14 @@
     document.getElementById('login-err').textContent = '';
     document.getElementById('login-pass').value = '';
   });
+
+  // v20: begitu baris ini tercapai, artinya SELURUH file (termasuk 11MB+ data
+  // produk di bawah) sudah selesai di-download & script mulai jalan -- dan
+  // tombol Customer/Admin di atas SUDAH ke-attach listernya (baris2 di atas).
+  // Overlay loading aman dihapus di sini, TIDAK perlu nunggu PRODUCTS/render()
+  // selesai segala (itu masih lanjut di background, sudah di-defer duluan).
+  var loadingOverlayEl = document.getElementById('appLoadingOverlay');
+  if (loadingOverlayEl) loadingOverlayEl.remove();
 
   async function tryLogin() {
     var val = document.getElementById('login-pass').value;
